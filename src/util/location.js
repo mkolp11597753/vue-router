@@ -7,7 +7,8 @@ import { fillParams } from './params'
 import { warn } from './warn'
 import { extend } from './misc'
 
-export function normalizeLocation (
+// 根据传入的location和当前route 生成新的location
+export function normalizeLocation(
   raw: RawLocation,
   current: ?Route,
   append: ?boolean,
@@ -18,6 +19,8 @@ export function normalizeLocation (
   if (next._normalized) {
     return next
   } else if (next.name) {
+    // 如果next指定了name
+    // 浅复制
     next = extend({}, raw)
     const params = next.params
     if (params && typeof params === 'object') {
@@ -27,6 +30,7 @@ export function normalizeLocation (
   }
 
   // relative params
+  // raw是个对象但没有包含path参数，则继承current的path
   if (!next.path && next.params && current) {
     next = extend({}, next)
     next._normalized = true
@@ -43,10 +47,11 @@ export function normalizeLocation (
     return next
   }
 
+  // 如果next包含path，则拼接currentPath和nextPath
   const parsedPath = parsePath(next.path || '')
   const basePath = (current && current.path) || '/'
   const path = parsedPath.path
-    ? resolvePath(parsedPath.path, basePath, append || next.append)
+    ? resolvePath(parsedPath.path, basePath, append || next.append) // 拼接字符串为路由
     : basePath
 
   const query = resolveQuery(
@@ -64,6 +69,6 @@ export function normalizeLocation (
     _normalized: true,
     path,
     query,
-    hash
+    hash,
   }
 }

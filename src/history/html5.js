@@ -10,13 +10,13 @@ import { pushState, replaceState, supportsPushState } from '../util/push-state'
 export class HTML5History extends History {
   _startLocation: string
 
-  constructor (router: Router, base: ?string) {
+  constructor(router: Router, base: ?string) {
     super(router, base)
 
     this._startLocation = getLocation(this.base)
   }
 
-  setupListeners () {
+  setupListeners() {
     if (this.listeners.length > 0) {
       return
     }
@@ -39,7 +39,7 @@ export class HTML5History extends History {
         return
       }
 
-      this.transitionTo(location, route => {
+      this.transitionTo(location, (route) => {
         if (supportsScroll) {
           handleScroll(router, route, current, true)
         }
@@ -51,41 +51,51 @@ export class HTML5History extends History {
     })
   }
 
-  go (n: number) {
+  go(n: number) {
     window.history.go(n)
   }
 
-  push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
+  push(location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
-    this.transitionTo(location, route => {
-      pushState(cleanPath(this.base + route.fullPath))
-      handleScroll(this.router, route, fromRoute, false)
-      onComplete && onComplete(route)
-    }, onAbort)
+    this.transitionTo(
+      location,
+      (route) => {
+        pushState(cleanPath(this.base + route.fullPath))
+        handleScroll(this.router, route, fromRoute, false)
+        onComplete && onComplete(route)
+      },
+      onAbort
+    )
   }
 
-  replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
+  replace(location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
-    this.transitionTo(location, route => {
-      replaceState(cleanPath(this.base + route.fullPath))
-      handleScroll(this.router, route, fromRoute, false)
-      onComplete && onComplete(route)
-    }, onAbort)
+    this.transitionTo(
+      location,
+      (route) => {
+        replaceState(cleanPath(this.base + route.fullPath))
+        handleScroll(this.router, route, fromRoute, false)
+        onComplete && onComplete(route)
+      },
+      onAbort
+    )
   }
 
-  ensureURL (push?: boolean) {
+  ensureURL(push?: boolean) {
     if (getLocation(this.base) !== this.current.fullPath) {
       const current = cleanPath(this.base + this.current.fullPath)
       push ? pushState(current) : replaceState(current)
     }
   }
 
-  getCurrentLocation (): string {
+  getCurrentLocation(): string {
     return getLocation(this.base)
   }
 }
 
-export function getLocation (base: string): string {
+// 如果当前路由 https://${base}/path
+// 返回base后的url
+export function getLocation(base: string): string {
   let path = decodeURI(window.location.pathname)
   if (base && path.toLowerCase().indexOf(base.toLowerCase()) === 0) {
     path = path.slice(base.length)

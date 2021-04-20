@@ -9,7 +9,7 @@ import { START, isSameRoute } from '../util/route'
 import {
   flatten,
   flatMapComponents,
-  resolveAsyncComponents
+  resolveAsyncComponents,
 } from '../util/resolve-components'
 import {
   createNavigationDuplicatedError,
@@ -18,7 +18,7 @@ import {
   createNavigationAbortedError,
   isError,
   isNavigationFailure,
-  NavigationFailureType
+  NavigationFailureType,
 } from '../util/errors'
 
 export class History {
@@ -46,7 +46,7 @@ export class History {
   +getCurrentLocation: () => string
   +setupListeners: Function
 
-  constructor (router: Router, base: ?string) {
+  constructor(router: Router, base: ?string) {
     this.router = router
     this.base = normalizeBase(base)
     // start with a route object that stands for "nowhere"
@@ -59,11 +59,11 @@ export class History {
     this.listeners = []
   }
 
-  listen (cb: Function) {
+  listen(cb: Function) {
     this.cb = cb
   }
 
-  onReady (cb: Function, errorCb: ?Function) {
+  onReady(cb: Function, errorCb: ?Function) {
     if (this.ready) {
       cb()
     } else {
@@ -74,21 +74,21 @@ export class History {
     }
   }
 
-  onError (errorCb: Function) {
+  onError(errorCb: Function) {
     this.errorCbs.push(errorCb)
   }
 
-  transitionTo (
+  transitionTo(
     location: RawLocation,
-    onComplete?: Function,
-    onAbort?: Function
+    onComplete?: Function, // 成功回调
+    onAbort?: Function // 失败回调
   ) {
     let route
     // catch redirect option https://github.com/vuejs/vue-router/issues/3201
     try {
       route = this.router.match(location, this.current)
     } catch (e) {
-      this.errorCbs.forEach(cb => {
+      this.errorCbs.forEach((cb) => {
         cb(e)
       })
       // Exception should still be thrown
@@ -96,24 +96,26 @@ export class History {
     }
     this.confirmTransition(
       route,
+      // 跳转成功回调
       () => {
         const prev = this.current
         this.updateRoute(route)
         onComplete && onComplete(route)
         this.ensureURL()
-        this.router.afterHooks.forEach(hook => {
+        // 触发生命周期 afterEach
+        this.router.afterHooks.forEach((hook) => {
           hook && hook(route, prev)
         })
 
         // fire ready cbs once
         if (!this.ready) {
           this.ready = true
-          this.readyCbs.forEach(cb => {
+          this.readyCbs.forEach((cb) => {
             cb(route)
           })
         }
       },
-      err => {
+      (err) => {
         if (onAbort) {
           onAbort(err)
         }
@@ -122,11 +124,11 @@ export class History {
           // Initial redirection should still trigger the onReady onSuccess
           // https://github.com/vuejs/vue-router/issues/3225
           if (!isNavigationFailure(err, NavigationFailureType.redirected)) {
-            this.readyErrorCbs.forEach(cb => {
+            this.readyErrorCbs.forEach((cb) => {
               cb(err)
             })
           } else {
-            this.readyCbs.forEach(cb => {
+            this.readyCbs.forEach((cb) => {
               cb(route)
             })
           }
@@ -135,15 +137,16 @@ export class History {
     )
   }
 
-  confirmTransition (route: Route, onComplete: Function, onAbort?: Function) {
+  // 检查路由跳转是否符合规范
+  confirmTransition(route: Route, onComplete: Function, onAbort?: Function) {
     const current = this.current
-    const abort = err => {
+    const abort = (err) => {
       // changed after adding errors with
       // https://github.com/vuejs/vue-router/pull/3047 before that change,
       // redirect and aborted navigation would produce an err == null
       if (!isNavigationFailure(err) && isError(err)) {
         if (this.errorCbs.length) {
-          this.errorCbs.forEach(cb => {
+          this.errorCbs.forEach((cb) => {
             cb(err)
           })
         } else {
@@ -155,6 +158,7 @@ export class History {
     }
     const lastRouteIndex = route.matched.length - 1
     const lastCurrentIndex = current.matched.length - 1
+    // 如果两个路由完全一致则报错
     if (
       isSameRoute(route, current) &&
       // in the case the route map has been dynamically appended to
@@ -165,11 +169,13 @@ export class History {
       return abort(createNavigationDuplicatedError(current, route))
     }
 
+    //
     const { updated, deactivated, activated } = resolveQueue(
       this.current.matched,
       route.matched
     )
 
+    // 打平路由守卫数组
     const queue: Array<?NavigationGuard> = [].concat(
       // in-component leave guards
       extractLeaveGuards(deactivated),
@@ -178,7 +184,7 @@ export class History {
       // in-component update hooks
       extractUpdateHooks(updated),
       // in-config enter guards
-      activated.map(m => m.beforeEnter),
+      activated.map((m) => m.beforeEnter),
       // async components
       resolveAsyncComponents(activated)
     )
@@ -234,7 +240,7 @@ export class History {
         onComplete(route)
         if (this.router.app) {
           this.router.app.$nextTick(() => {
-            postEnterCbs.forEach(cb => {
+            postEnterCbs.forEach((cb) => {
               cb()
             })
           })
@@ -243,19 +249,19 @@ export class History {
     })
   }
 
-  updateRoute (route: Route) {
+  updateRoute(route: Route) {
     this.current = route
     this.cb && this.cb(route)
   }
 
-  setupListeners () {
+  setupListeners() {
     // Default implementation is empty
   }
 
-  teardown () {
+  teardown() {
     // clean up event listeners
     // https://github.com/vuejs/vue-router/issues/2341
-    this.listeners.forEach(cleanupListener => {
+    this.listeners.forEach((cleanupListener) => {
       cleanupListener()
     })
     this.listeners = []
@@ -267,7 +273,8 @@ export class History {
   }
 }
 
-function normalizeBase (base: ?string): string {
+// 获取base路由，并去掉尾部斜杠
+function normalizeBase(base: ?string): string {
   if (!base) {
     if (inBrowser) {
       // respect <base> tag
@@ -287,13 +294,13 @@ function normalizeBase (base: ?string): string {
   return base.replace(/\/$/, '')
 }
 
-function resolveQueue (
+function resolveQueue(
   current: Array<RouteRecord>,
   next: Array<RouteRecord>
 ): {
   updated: Array<RouteRecord>,
   activated: Array<RouteRecord>,
-  deactivated: Array<RouteRecord>
+  deactivated: Array<RouteRecord>,
 } {
   let i
   const max = Math.max(current.length, next.length)
@@ -305,11 +312,11 @@ function resolveQueue (
   return {
     updated: next.slice(0, i),
     activated: next.slice(i),
-    deactivated: current.slice(i)
+    deactivated: current.slice(i),
   }
 }
 
-function extractGuards (
+function extractGuards(
   records: Array<RouteRecord>,
   name: string,
   bind: Function,
@@ -319,14 +326,14 @@ function extractGuards (
     const guard = extractGuard(def, name)
     if (guard) {
       return Array.isArray(guard)
-        ? guard.map(guard => bind(guard, instance, match, key))
+        ? guard.map((guard) => bind(guard, instance, match, key))
         : bind(guard, instance, match, key)
     }
   })
   return flatten(reverse ? guards.reverse() : guards)
 }
 
-function extractGuard (
+function extractGuard(
   def: Object | Function,
   key: string
 ): NavigationGuard | Array<NavigationGuard> {
@@ -337,23 +344,23 @@ function extractGuard (
   return def.options[key]
 }
 
-function extractLeaveGuards (deactivated: Array<RouteRecord>): Array<?Function> {
+function extractLeaveGuards(deactivated: Array<RouteRecord>): Array<?Function> {
   return extractGuards(deactivated, 'beforeRouteLeave', bindGuard, true)
 }
 
-function extractUpdateHooks (updated: Array<RouteRecord>): Array<?Function> {
+function extractUpdateHooks(updated: Array<RouteRecord>): Array<?Function> {
   return extractGuards(updated, 'beforeRouteUpdate', bindGuard)
 }
 
-function bindGuard (guard: NavigationGuard, instance: ?_Vue): ?NavigationGuard {
+function bindGuard(guard: NavigationGuard, instance: ?_Vue): ?NavigationGuard {
   if (instance) {
-    return function boundRouteGuard () {
+    return function boundRouteGuard() {
       return guard.apply(instance, arguments)
     }
   }
 }
 
-function extractEnterGuards (
+function extractEnterGuards(
   activated: Array<RouteRecord>,
   cbs: Array<Function>,
   isValid: () => boolean
@@ -367,15 +374,15 @@ function extractEnterGuards (
   )
 }
 
-function bindEnterGuard (
+function bindEnterGuard(
   guard: NavigationGuard,
   match: RouteRecord,
   key: string,
   cbs: Array<Function>,
   isValid: () => boolean
 ): NavigationGuard {
-  return function routeEnterGuard (to, from, next) {
-    return guard(to, from, cb => {
+  return function routeEnterGuard(to, from, next) {
+    return guard(to, from, (cb) => {
       if (typeof cb === 'function') {
         cbs.push(() => {
           // #750
@@ -391,7 +398,7 @@ function bindEnterGuard (
   }
 }
 
-function poll (
+function poll(
   cb: any, // somehow flow cannot infer this is a function
   instances: Object,
   key: string,

@@ -9,25 +9,34 @@ import { createRouteMap } from './create-route-map'
 import { normalizeLocation } from './util/location'
 
 export type Matcher = {
-  match: (raw: RawLocation, current?: Route, redirectedFrom?: Location) => Route;
-  addRoutes: (routes: Array<RouteConfig>) => void;
-};
+  match: (
+    raw: RawLocation,
+    current?: Route,
+    redirectedFrom?: Location
+  ) => Route,
+  addRoutes: (routes: Array<RouteConfig>) => void,
+}
 
-export function createMatcher (
+export function createMatcher(
   routes: Array<RouteConfig>,
   router: VueRouter
 ): Matcher {
+  // 解析routes，获得所有路由的信息并储存
   const { pathList, pathMap, nameMap } = createRouteMap(routes)
 
-  function addRoutes (routes) {
+  // API：动态增加路由 vue-router3 暂时只提供增加路由的方法
+  function addRoutes(routes) {
     createRouteMap(routes, pathList, pathMap, nameMap)
   }
 
-  function match (
-    raw: RawLocation,
+  //根据传入的location和当前route，计算出一个新的route
+  function match(
+    raw: RawLocation, // 路由字符串或者是携带路由信息的对象
     currentRoute?: Route,
     redirectedFrom?: Location
   ): Route {
+    //raw是currentRoute的子路径的表达式
+    // normalizeLocation 生成location
     const location = normalizeLocation(raw, currentRoute, false, router)
     const { name } = location
 
@@ -38,8 +47,8 @@ export function createMatcher (
       }
       if (!record) return _createRoute(null, location)
       const paramNames = record.regex.keys
-        .filter(key => !key.optional)
-        .map(key => key.name)
+        .filter((key) => !key.optional)
+        .map((key) => key.name)
 
       if (typeof location.params !== 'object') {
         location.params = {}
@@ -53,7 +62,11 @@ export function createMatcher (
         }
       }
 
-      location.path = fillParams(record.path, location.params, `named route "${name}"`)
+      location.path = fillParams(
+        record.path,
+        location.params,
+        `named route "${name}"`
+      )
       return _createRoute(record, location, redirectedFrom)
     } else if (location.path) {
       location.params = {}
@@ -69,14 +82,12 @@ export function createMatcher (
     return _createRoute(null, location)
   }
 
-  function redirect (
-    record: RouteRecord,
-    location: Location
-  ): Route {
+  function redirect(record: RouteRecord, location: Location): Route {
     const originalRedirect = record.redirect
-    let redirect = typeof originalRedirect === 'function'
-      ? originalRedirect(createRoute(record, location, null, router))
-      : originalRedirect
+    let redirect =
+      typeof originalRedirect === 'function'
+        ? originalRedirect(createRoute(record, location, null, router))
+        : originalRedirect
 
     if (typeof redirect === 'string') {
       redirect = { path: redirect }
@@ -84,9 +95,7 @@ export function createMatcher (
 
     if (!redirect || typeof redirect !== 'object') {
       if (process.env.NODE_ENV !== 'production') {
-        warn(
-          false, `invalid redirect option: ${JSON.stringify(redirect)}`
-        )
+        warn(false, `invalid redirect option: ${JSON.stringify(redirect)}`)
       }
       return _createRoute(null, location)
     }
@@ -102,27 +111,42 @@ export function createMatcher (
       // resolved named direct
       const targetRecord = nameMap[name]
       if (process.env.NODE_ENV !== 'production') {
-        assert(targetRecord, `redirect failed: named route "${name}" not found.`)
+        assert(
+          targetRecord,
+          `redirect failed: named route "${name}" not found.`
+        )
       }
-      return match({
-        _normalized: true,
-        name,
-        query,
-        hash,
-        params
-      }, undefined, location)
+      return match(
+        {
+          _normalized: true,
+          name,
+          query,
+          hash,
+          params,
+        },
+        undefined,
+        location
+      )
     } else if (path) {
       // 1. resolve relative redirect
       const rawPath = resolveRecordPath(path, record)
       // 2. resolve params
-      const resolvedPath = fillParams(rawPath, params, `redirect route with path "${rawPath}"`)
+      const resolvedPath = fillParams(
+        rawPath,
+        params,
+        `redirect route with path "${rawPath}"`
+      )
       // 3. rematch with existing query and hash
-      return match({
-        _normalized: true,
-        path: resolvedPath,
-        query,
-        hash
-      }, undefined, location)
+      return match(
+        {
+          _normalized: true,
+          path: resolvedPath,
+          query,
+          hash,
+        },
+        undefined,
+        location
+      )
     } else {
       if (process.env.NODE_ENV !== 'production') {
         warn(false, `invalid redirect option: ${JSON.stringify(redirect)}`)
@@ -131,15 +155,19 @@ export function createMatcher (
     }
   }
 
-  function alias (
+  function alias(
     record: RouteRecord,
     location: Location,
     matchAs: string
   ): Route {
-    const aliasedPath = fillParams(matchAs, location.params, `aliased route with path "${matchAs}"`)
+    const aliasedPath = fillParams(
+      matchAs,
+      location.params,
+      `aliased route with path "${matchAs}"`
+    )
     const aliasedMatch = match({
       _normalized: true,
-      path: aliasedPath
+      path: aliasedPath,
     })
     if (aliasedMatch) {
       const matched = aliasedMatch.matched
@@ -150,7 +178,7 @@ export function createMatcher (
     return _createRoute(null, location)
   }
 
-  function _createRoute (
+  function _createRoute(
     record: ?RouteRecord,
     location: Location,
     redirectedFrom?: Location
@@ -164,17 +192,14 @@ export function createMatcher (
     return createRoute(record, location, redirectedFrom, router)
   }
 
+  // 提供两个api
   return {
     match,
-    addRoutes
+    addRoutes,
   }
 }
 
-function matchRoute (
-  regex: RouteRegExp,
-  path: string,
-  params: Object
-): boolean {
+function matchRoute(regex: RouteRegExp, path: string, params: Object): boolean {
   const m = path.match(regex)
 
   if (!m) {
@@ -195,6 +220,6 @@ function matchRoute (
   return true
 }
 
-function resolveRecordPath (path: string, record: RouteRecord): string {
+function resolveRecordPath(path: string, record: RouteRecord): string {
   return resolvePath(path, record.parent ? record.parent.path : '/', true)
 }

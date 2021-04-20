@@ -7,16 +7,19 @@ const Time =
     ? window.performance
     : Date
 
-export function genStateKey (): string {
+// 创建一个新的key
+export function genStateKey(): string {
   return Time.now().toFixed(3)
 }
 
 let _key: string = genStateKey()
 
-export function getStateKey () {
+// 获取当前页面的key值
+export function getStateKey() {
   return _key
 }
 
-export function setStateKey (key: string) {
+// 设置key值
+export function setStateKey(key: string) {
   return (_key = key)
 }

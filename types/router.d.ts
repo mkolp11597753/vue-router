@@ -76,7 +76,7 @@ export enum NavigationFailureType {
   redirected = 2,
   aborted = 4,
   cancelled = 8,
-  duplicated = 16
+  duplicated = 16,
 }
 
 export interface NavigationFailure extends Error {
@@ -169,13 +169,13 @@ export interface Location {
 }
 
 export interface Route {
-  path: string
-  name?: string | null
+  path: string // 不包含baseUrl
+  name?: string | null // 一个别名
   hash: string
-  query: Dictionary<string | (string | null)[]>
+  query: Dictionary<string | (string | null)[]> // query参数
   params: Dictionary<string>
-  fullPath: string
+  fullPath: string // 全路径，protocol + host + baseUrl + path
   matched: RouteRecord[]
   redirectedFrom?: string
-  meta?: any
+  meta?: any // 自定义参数
 }
